@@ -25,7 +25,6 @@ export default class LogScreen extends React.Component {
     handleLogPress = async () => {
         console.log('Logout pressed');
         const token =  await SecureStore.getItemAsync('ID');
-        console.log(token)
          const log = await this.logout(token);
          if (log)
          {

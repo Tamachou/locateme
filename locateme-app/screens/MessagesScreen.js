@@ -1,28 +1,120 @@
-import * as WebBrowser from 'expo-web-browser';
 import React from 'react';
 import {
-  Image,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
-
-import { MonoText } from '../components/StyledText';
+import axios from "axios";
+import * as geolib from "geolib";
+import * as SecureStore from "expo-secure-store";
+import * as Location from "expo-location";
+import CheckBox from 'react-native-checkbox';
+import LoginButton from '../components/Button';
+import * as SMS from 'expo-sms';
 
 export default class MessScreen extends  React.Component {
+
+  state = {
+    token: '',
+    myLocation: {
+      latitude: 0,
+      longitude: 0
+    },
+    mapCircle: [],
+  };
+
+  componentDidMount = async () => {
+    const token =  await SecureStore.getItemAsync('ID');
+    const mapCircle = await this.getAll();
+
+    this.setState({
+      token,
+      mapCircle
+    });
+  };
+
+  mappingNum = async (response) => {
+    const myLocation = await Location.getCurrentPositionAsync();
+    const {data} = response;
+    const mapCircle = [];
+
+    for (let i = 0; i < data.length; i++) {
+      const inside = await geolib.isPointWithinRadius({latitude: data[i].lat, longitude: data[i].lng}, {...myLocation.coords}, 5000);
+      if (inside) {
+        data[i].checked = false;
+        mapCircle.push(data[i]);
+      }
+    }
+    return mapCircle;
+  }
+
+  getCheckUser = () => {
+    const {mapCircle} = this.state;
+    num = [];
+    for(let i = 0; i<mapCircle.length; i++ )
+    {
+      if (mapCircle[i].checked)
+      {
+       num.push(mapCircle[i].phoneNumber)
+      }
+    }
+    return num;
+  };
+
+  handleSendMessage = async () => {
+    const peons = this.getCheckUser();
+    if (peons.length > 0) {
+      const isAvailable = await SMS.isAvailableAsync();
+      if (isAvailable) {
+      await  SMS.sendSMSAsync(peons,'Nice to meet you! Wanna chat?');
+      } else {
+        console.log("misfortune... there's no SMS available on this device");
+      }
+    }
+  }
+
+  getAll = () =>
+  {
+    return new Promise( (resolve, reject) => {
+      axios.get('https://locatemeapi.herokuapp.com/all')
+          .then(async (response) => {
+            resolve(await this.mappingNum(response));
+          }) .catch(function (err) {
+        console.log(err)
+      })
+    })
+  };
+
+onChange = (key) => {
+  const mapCircle = this.state.mapCircle.map((user) => {
+    if(user._id === key) {
+      user.checked = !user.checked;
+    }
+    return user;
+  })
+
+  this.setState({mapCircle})
+};
+
   render() {
     return (
         <View style={styles.container}>
-        <ScrollView
+    <ScrollView
     style={styles.container}
     contentContainerStyle={styles.contentContainer}>
         <View style={styles.getStartedContainer}>
-
-        <Text style={styles.getStartedText}>Message page</Text>
-
+        <Text style={styles.getStartedText}>Send some word</Text>
+    {this.state.mapCircle.map( numPeon => (
+        <CheckBox
+          key ={numPeon._id}
+          label={numPeon.phoneNumber}
+          checked={numPeon.checked}
+          onChange={() => this.onChange(numPeon._id)}
+        />
+    ))}
+        <LoginButton label='Send' onPress={this.handleSendMessage}/>
     </View>
     </ScrollView>
     </View>

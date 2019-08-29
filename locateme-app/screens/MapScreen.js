@@ -1,16 +1,11 @@
-import * as WebBrowser from 'expo-web-browser';
 import React from 'react';
-import {
-  StyleSheet,
-  View,
-} from 'react-native';
-
+import { StyleSheet, View} from 'react-native';
 import MapView from 'react-native-maps';
 import * as SecureStore from "expo-secure-store";
 import * as Location from "expo-location";
 import { withNavigationFocus } from 'react-navigation';
 import axios from 'axios';
-import { Marker, Callout } from 'react-native-maps';
+import { Marker, Circle } from 'react-native-maps';
 import * as Contacts from 'expo-contacts';
 import * as Permissions from "expo-permissions";
 
@@ -56,21 +51,19 @@ componentDidMount = async () => {
           .then(function (response) {
             resolve(response.data);
           }) .catch(function (err) {
-            console.log('all');
         console.log(err)
       })
     })
   };
 
-  updateMe = () =>
+  updateMe = (pos) =>
   {
     return new Promise( async (resolve, reject) => {
-      let pos = await Location.getCurrentPositionAsync();
+
       axios.put(`https://locatemeapi.herokuapp.com/update/${this.state.token}`, {'lat': pos.coords.latitude, 'lng': pos.coords.longitude} )
           .then(function (response) {
             resolve(response.data);
           }) .catch(function (err) {
-            console.log('me');
         console.log(err)
       })
     })
@@ -82,9 +75,11 @@ onRegionChange = (region) => {
 
 upMap =  async () =>
 {
-   await this.updateMe();
+    let pos = await Location.getCurrentPositionAsync();
+   await this.updateMe(pos);
     this.setState({allLocation : await this.getAll()});
-    console.log('over')
+    this.setState({myLocation : pos.coords});
+    console.log('updated')
 };
 
 addContact = async (number) => {
@@ -100,9 +95,9 @@ addContact = async (number) => {
         }
         const contactId = await Contacts.addContactAsync(contact);
         console.log('Contact added')
-    }
-    ;
+    };
 }
+
   render() {
     return (
         <View style={styles.container}>
@@ -123,7 +118,16 @@ addContact = async (number) => {
 
                     </Marker>
               ))}
-        </MapView>
+                    <Circle
+                        center= {{
+                            latitude: this.state.myLocation.latitude,
+                            longitude: this.state.myLocation.longitude,
+                        }}
+                        radius = {5000}
+                        fillColor = 'rgba(147,112,219, 0.4)'
+                        />
+
+      </MapView>
     </View>
   );
   }
