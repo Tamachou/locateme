@@ -10,7 +10,7 @@ import * as SecureStore from 'expo-secure-store';
 
 export default class HomeScreen extends  React.Component {
   state ={
-    phoneNumber: '0612345678',
+    phoneNumber: '',
   };
   handlePhoneChange = (phone: string) => {
         this.setState({phoneNumber: phone})
